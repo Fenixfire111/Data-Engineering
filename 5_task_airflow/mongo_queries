@@ -1,0 +1,15 @@
+//  Top 5 famous commentaries
+db.collection.find().sort({thumbsUpCount: -1}).limit(5);
+
+// All records, where length of field “content” is less than 5 characters
+db.collection.find({$where: "this.content.length < 5"});
+
+// Avarage rating by each day (should be in timestamp type)
+db.collection.aggregate(
+    {
+        "$group": {
+            _id: "$at",
+            average_rating: { $avg: "$thumbsUpCount" }
+        }
+    }
+    );
