@@ -4,6 +4,26 @@ from datetime import datetime, timedelta
 import pandas as pd
 from airflow.models import Variable, TaskInstance
 from pymongo import MongoClient
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+# db host
+DB_HOST = os.getenv('DB_HOST')
+# db port
+DB_PORT = int(os.getenv('DB_PORT'))
+# db name
+DB_NAME = os.getenv('DB_NAME')
+# collection name
+COLLECTION_NAME = os.getenv('COLLECTION_NAME')
+
+
+def create_connection() -> MongoClient:
+    """connect_to_db"""
+    client = MongoClient(DB_HOST, DB_PORT)
+    db = client[DB_NAME]
+    return db
 
 
 def read_process_data(ti: TaskInstance) -> bool:
@@ -20,10 +40,9 @@ def read_process_data(ti: TaskInstance) -> bool:
 def load_data(ti: TaskInstance) -> bool:
     """load the processed data to the database"""
     data = ti.xcom_pull(task_ids="read_process_data", key="process_data")
-    client = MongoClient("localhost", 27017)
-    db = client["airflow_task"]
-    db.collection.insert_many(data)
-    client.close()
+    db = create_connection()
+    collection = db[COLLECTION_NAME]
+    collection.insert_many(data)
     return True
 
 
@@ -38,7 +57,7 @@ with DAG(
         task_id='read_process_data',
         python_callable=read_process_data
     )
-    
+
     load_data = PythonOperator(
         task_id='load_data',
         python_callable=load_data
